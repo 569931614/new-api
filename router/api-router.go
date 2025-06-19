@@ -31,6 +31,11 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.GET("/oauth/oidc", middleware.CriticalRateLimit(), controller.OidcAuth)
 		apiRouter.GET("/oauth/linuxdo", middleware.CriticalRateLimit(), controller.LinuxdoOAuth)
 		apiRouter.GET("/oauth/state", middleware.CriticalRateLimit(), controller.GenerateOAuthCode)
+
+		// 外部授权码接口（无需认证，已移除限流）
+		apiRouter.POST("/auth/bind", controller.BindMachineCode)
+		apiRouter.POST("/auth/validate", controller.ValidateAuthCode)
+		apiRouter.GET("/auth/channels", controller.GetChannelsByAuthCode)
 		apiRouter.GET("/oauth/wechat", middleware.CriticalRateLimit(), controller.WeChatAuth)
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), controller.WeChatBind)
 		apiRouter.GET("/oauth/email/bind", middleware.CriticalRateLimit(), controller.EmailBind)
@@ -127,6 +132,17 @@ func SetApiRouter(router *gin.Engine) {
 			redemptionRoute.POST("/", controller.AddRedemption)
 			redemptionRoute.PUT("/", controller.UpdateRedemption)
 			redemptionRoute.DELETE("/:id", controller.DeleteRedemption)
+		}
+		authCodeRoute := apiRouter.Group("/auth_code")
+		authCodeRoute.Use(middleware.AdminAuth())
+		{
+			authCodeRoute.GET("/", controller.GetAllAuthCodes)
+			authCodeRoute.GET("/search", controller.SearchAuthCodes)
+			authCodeRoute.GET("/:id", controller.GetAuthCode)
+			authCodeRoute.POST("/", controller.AddAuthCode)
+			authCodeRoute.POST("/batch", controller.BatchCreateAuthCodes)
+			authCodeRoute.PUT("/", controller.UpdateAuthCode)
+			authCodeRoute.DELETE("/:id", controller.DeleteAuthCode)
 		}
 		logRoute := apiRouter.Group("/log")
 		logRoute.GET("/", middleware.AdminAuth(), controller.GetAllLogs)

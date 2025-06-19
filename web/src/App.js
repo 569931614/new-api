@@ -14,6 +14,7 @@ import Channel from './pages/Channel';
 import Token from './pages/Token';
 import EditChannel from './pages/Channel/EditChannel';
 import Redemption from './pages/Redemption';
+import AuthCode from './pages/AuthCode';
 import TopUp from './pages/TopUp';
 import Log from './pages/Log';
 import Chat from './pages/Chat';
@@ -98,6 +99,14 @@ function App() {
           element={
             <PrivateRoute>
               <Redemption />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path='/console/auth_code'
+          element={
+            <PrivateRoute>
+              <AuthCode />
             </PrivateRoute>
           }
         />

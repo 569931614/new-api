@@ -12,6 +12,7 @@ import (
 type Channel struct {
 	Id                 int     `json:"id"`
 	Type               int     `json:"type" gorm:"default:0"`
+	BusinessType       int     `json:"business_type" gorm:"default:1"` // 业务类型：1-对话，2-应用，3-工作流
 	Key                string  `json:"key" gorm:"not null"`
 	OpenAIOrganization *string `json:"openai_organization"`
 	TestModel          *string `json:"test_model"`
@@ -93,6 +94,13 @@ func (channel *Channel) GetAutoBan() bool {
 		return false
 	}
 	return *channel.AutoBan == 1
+}
+
+func (channel *Channel) GetBusinessType() int {
+	if channel.BusinessType == 0 {
+		return 1 // 默认为对话类型
+	}
+	return channel.BusinessType
 }
 
 func (channel *Channel) Save() error {

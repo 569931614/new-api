@@ -163,8 +163,8 @@ var (
 	DownloadRateLimitNum            = 10
 	DownloadRateLimitDuration int64 = 60
 
-	CriticalRateLimitNum            = 20
-	CriticalRateLimitDuration int64 = 20 * 60
+	CriticalRateLimitNum            = 100    // 增加到100次
+	CriticalRateLimitDuration int64 = 5 * 60 // 缩短到5分钟
 )
 
 var RateLimitKeyExpirationDuration = 20 * time.Minute
@@ -243,6 +243,13 @@ const (
 	ChannelTypeCoze           = 49
 	ChannelTypeDummy          // this one is only for count, do not add any channel after this
 
+)
+
+// Channel Business Type Constants
+const (
+	ChannelBusinessTypeChat     = 1 // 对话
+	ChannelBusinessTypeApp      = 2 // 应用
+	ChannelBusinessTypeWorkflow = 3 // 工作流
 )
 
 var ChannelBaseURLs = []string{

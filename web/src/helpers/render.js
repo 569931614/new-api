@@ -44,6 +44,7 @@ import {
   CreditCard,
   Layers,
   Gift,
+  Shield,
   User,
   Settings,
   CircleUser,
@@ -61,6 +62,7 @@ export const sidebarIconColors = {
   credit: '#F97316', // 橙色
   layers: '#EF4444', // 红色
   gift: '#F43F5E', // 玫红色
+  shield: '#059669', // 绿色（授权码）
   user: '#6366F1', // 靛蓝色
   settings: '#6B7280', // 灰色
 };
@@ -145,6 +147,13 @@ export function getLucideIcon(key, selected = false) {
         <Gift
           {...commonProps}
           color={selected ? sidebarIconColors.gift : 'currentColor'}
+        />
+      );
+    case 'auth_code':
+      return (
+        <Shield
+          {...commonProps}
+          color={selected ? sidebarIconColors.shield : 'currentColor'}
         />
       );
     case 'user':

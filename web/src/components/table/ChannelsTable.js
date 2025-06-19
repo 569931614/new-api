@@ -25,7 +25,7 @@ import {
   Tags
 } from 'lucide-react';
 
-import { CHANNEL_OPTIONS, ITEMS_PER_PAGE } from '../../constants/index.js';
+import { CHANNEL_OPTIONS, ITEMS_PER_PAGE, BUSINESS_TYPE_MAP, getBusinessTypeLabel, getBusinessTypeColor, getBusinessTypeIcon } from '../../constants/index.js';
 import {
   Button,
   Divider,
@@ -107,6 +107,22 @@ const ChannelsTable = () => {
     );
   };
 
+  const renderBusinessType = (businessType) => {
+    const label = getBusinessTypeLabel(businessType);
+    const color = getBusinessTypeColor(businessType);
+    const icon = getBusinessTypeIcon(businessType);
+
+    return (
+      <Tag
+        size='large'
+        color={color}
+        shape='circle'
+      >
+        {icon} {label}
+      </Tag>
+    );
+  };
+
   const renderStatus = (status) => {
     switch (status) {
       case 1:
@@ -178,6 +194,7 @@ const ChannelsTable = () => {
     NAME: 'name',
     GROUP: 'group',
     TYPE: 'type',
+    BUSINESS_TYPE: 'business_type',
     STATUS: 'status',
     RESPONSE_TIME: 'response_time',
     BALANCE: 'balance',
@@ -227,6 +244,7 @@ const ChannelsTable = () => {
       [COLUMN_KEYS.NAME]: true,
       [COLUMN_KEYS.GROUP]: true,
       [COLUMN_KEYS.TYPE]: true,
+      [COLUMN_KEYS.BUSINESS_TYPE]: true,
       [COLUMN_KEYS.STATUS]: true,
       [COLUMN_KEYS.RESPONSE_TIME]: true,
       [COLUMN_KEYS.BALANCE]: true,
@@ -300,6 +318,18 @@ const ChannelsTable = () => {
           return <>{renderType(text)}</>;
         } else {
           return <>{renderTagType()}</>;
+        }
+      },
+    },
+    {
+      key: COLUMN_KEYS.BUSINESS_TYPE,
+      title: t('业务类型'),
+      dataIndex: 'business_type',
+      render: (text, record, index) => {
+        if (record.children === undefined) {
+          return <>{renderBusinessType(text || 1)}</>;
+        } else {
+          return <span>-</span>;
         }
       },
     },

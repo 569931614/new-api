@@ -9,7 +9,7 @@ import {
   showSuccess,
   verifyJSON,
 } from '../../helpers';
-import { CHANNEL_OPTIONS } from '../../constants';
+import { CHANNEL_OPTIONS, BUSINESS_TYPE_OPTIONS } from '../../constants';
 import {
   SideSheet,
   Space,
@@ -81,6 +81,7 @@ const EditChannel = (props) => {
   const originInputs = {
     name: '',
     type: 1,
+    business_type: 1, // 默认为对话类型
     key: '',
     openai_organization: '',
     max_input_tokens: 0,
@@ -491,6 +492,21 @@ const EditChannel = (props) => {
                     filter
                     searchPosition='dropdown'
                     placeholder={t('请选择渠道类型')}
+                    size="large"
+                    className="!rounded-lg"
+                  />
+                </div>
+
+                <div>
+                  <Text strong className="block mb-2">{t('业务类型')}</Text>
+                  <Select
+                    name='business_type'
+                    required
+                    optionList={BUSINESS_TYPE_OPTIONS}
+                    value={inputs.business_type || 1}
+                    onChange={(value) => handleInputChange('business_type', value)}
+                    style={{ width: '100%' }}
+                    placeholder={t('请选择业务类型')}
                     size="large"
                     className="!rounded-lg"
                   />

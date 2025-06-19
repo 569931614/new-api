@@ -21,6 +21,7 @@ const routerMap = {
   channel: '/console/channel',
   token: '/console/token',
   redemption: '/console/redemption',
+  auth_code: '/console/auth_code',
   topup: '/console/topup',
   user: '/console/user',
   log: '/console/log',
@@ -119,6 +120,12 @@ const SiderBar = () => {
         text: t('兑换码'),
         itemKey: 'redemption',
         to: '/redemption',
+        className: isAdmin() ? '' : 'tableHiddle',
+      },
+      {
+        text: t('授权码'),
+        itemKey: 'auth_code',
+        to: '/auth_code',
         className: isAdmin() ? '' : 'tableHiddle',
       },
       {
@@ -235,6 +242,7 @@ const SiderBar = () => {
       case 'topup': return sidebarIconColors.credit;
       case 'channel': return sidebarIconColors.layers;
       case 'redemption': return sidebarIconColors.gift;
+      case 'auth_code': return sidebarIconColors.shield;
       case 'user':
       case 'personal': return sidebarIconColors.user;
       case 'setting': return sidebarIconColors.settings;
