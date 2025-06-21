@@ -11,6 +11,7 @@ import (
 	"one-api/relay/channel/cloudflare"
 	"one-api/relay/channel/cohere"
 	"one-api/relay/channel/coze"
+	"one-api/relay/channel/coze_jwt"
 	"one-api/relay/channel/deepseek"
 	"one-api/relay/channel/dify"
 	"one-api/relay/channel/gemini"
@@ -91,6 +92,8 @@ func GetAdaptor(apiType int) channel.Adaptor {
 		return &xai.Adaptor{}
 	case constant.APITypeCoze:
 		return &coze.Adaptor{}
+	case constant.APITypeCozeJWT:
+		return &coze_jwt.Adaptor{}
 	}
 	return nil
 }
