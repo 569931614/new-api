@@ -31,7 +31,8 @@
 |---------|------|------|------|
 | 机器码绑定 | POST | `/api/auth/bind` | 将授权码与机器码绑定 |
 | 授权码验证 | POST | `/api/auth/validate` | 验证授权码有效性 |
-| 获取渠道列表 | POST | `/api/auth/channels` | 根据授权码获取可用渠道列表 |
+| 获取渠道列表 | GET | `/api/auth/channels` | 根据授权码获取可用渠道列表 |
+| 获取API密钥 | GET | `/api/auth/api_key` | 根据授权码获取绑定的API密钥 |
 
 ---
 
@@ -389,6 +390,164 @@ curl -X POST http://your-domain/api/auth/channels \
 
 ---
 
+## 获取API密钥接口
+
+### 基本信息
+- **接口地址：** `GET /api/auth/api_key`
+- **Content-Type：** `application/json`
+- **用途：** 根据授权码获取绑定的API密钥信息
+- **使用场景：** 需要获取授权码关联的API密钥进行后续操作时
+
+### 请求参数
+
+| 参数名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| auth_code | string | 是 | 授权码（URL参数） |
+
+### 请求示例
+
+#### cURL
+```bash
+curl -X GET "http://your-domain/api/auth/api_key?auth_code=9WQrAHZcsvOwydLj"
+```
+
+#### JavaScript
+```javascript
+async function getApiKeyByAuthCode(authCode) {
+  const response = await fetch(`/api/auth/api_key?auth_code=${encodeURIComponent(authCode)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+
+  const result = await response.json();
+  return result;
+}
+
+// 使用示例
+try {
+  const result = await getApiKeyByAuthCode('9WQrAHZcsvOwydLj');
+  if (result.success) {
+    console.log('API密钥信息:', result.data);
+    console.log('API Key:', result.data.api_key);
+  } else {
+    console.error('获取失败:', result.message);
+  }
+} catch (error) {
+  console.error('请求失败:', error);
+}
+```
+
+#### Python
+```python
+import requests
+
+def get_api_key_by_auth_code(auth_code, base_url="http://your-domain"):
+    """根据授权码获取API密钥"""
+    response = requests.get(f'{base_url}/api/auth/api_key', params={
+        'auth_code': auth_code
+    })
+
+    return response.json()
+
+# 使用示例
+try:
+    result = get_api_key_by_auth_code('9WQrAHZcsvOwydLj')
+    if result['success']:
+        print('API密钥信息:', result['data'])
+        print('API Key:', result['data']['api_key'])
+    else:
+        print(f'获取失败: {result["message"]}')
+except Exception as e:
+    print(f'请求失败: {e}')
+```
+
+### 响应格式
+
+#### 成功响应
+```json
+{
+  "success": true,
+  "message": "获取API密钥成功",
+  "data": {
+    "token_id": 1,
+    "token_name": "我的API密钥",
+    "api_key": "sk-1234567890abcdef1234567890abcdef",
+    "status": 1,
+    "expired_time": 1703123456,
+    "remain_quota": 1000000,
+    "unlimited_quota": false,
+    "group": "default",
+    "auth_code_info": {
+      "code": "9WQrAHZcsvOwydLj",
+      "name": "测试授权码",
+      "user_type": 1,
+      "is_bot": false,
+      "group": "default"
+    }
+  }
+}
+```
+
+#### 失败响应
+```json
+{
+  "success": false,
+  "message": "错误描述"
+}
+```
+
+### 返回数据说明
+
+#### Token信息字段
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| token_id | int | API密钥ID |
+| token_name | string | API密钥名称 |
+| api_key | string | API密钥值 |
+| status | int | 密钥状态（1:启用, 2:禁用） |
+| expired_time | int | 过期时间戳（-1表示永不过期） |
+| remain_quota | int | 剩余配额 |
+| unlimited_quota | bool | 是否无限配额 |
+| group | string | 密钥分组 |
+
+#### 授权码信息字段
+| 字段名 | 类型 | 说明 |
+|--------|------|------|
+| code | string | 授权码 |
+| name | string | 授权码名称 |
+| user_type | int | 用户类型（1:普通用户, 10:管理员, 100:超级管理员） |
+| is_bot | bool | 是否为机器人账户 |
+| group | string | 授权码分组 |
+
+### 常见错误
+
+| 错误信息 | 原因 | 解决方案 |
+|----------|------|----------|
+| 授权码参数不能为空 | 未提供auth_code参数 | 检查请求URL是否包含auth_code参数 |
+| 授权码不存在 | 提供的授权码无效 | 检查授权码是否正确 |
+| 授权码无效或已过期 | 授权码状态异常或已过期 | 联系管理员检查授权码状态 |
+| 授权码未激活 | 授权码状态不是激活状态 | 需要先绑定机器码激活授权码 |
+| 授权码未绑定API密钥 | 授权码没有关联任何API密钥 | 联系管理员为授权码绑定API密钥 |
+| 绑定的API密钥不存在或已被禁用 | 关联的API密钥已被删除或禁用 | 联系管理员检查API密钥状态 |
+
+### 安全说明
+
+1. **状态验证**：只有激活状态（status=5）的授权码才能获取API密钥
+2. **权限控制**：确保授权码已通过机器码绑定验证
+3. **密钥保护**：返回完整的API密钥，请妥善保管
+4. **状态检查**：只返回启用状态的API密钥信息
+
+### 使用建议
+
+1. **缓存机制**：建议在客户端缓存API密钥信息，避免频繁请求
+2. **错误处理**：实现完善的错误处理机制，对不同错误类型进行相应处理
+3. **安全存储**：获取到的API密钥应安全存储，避免泄露
+4. **定期检查**：定期检查API密钥的有效性和配额情况
+
+---
+
 ## 安全机制说明
 
 ### 挑战-响应验证原理
@@ -507,6 +666,25 @@ class AuthCodeClient {
   }
 
   /**
+   * 获取API密钥
+   */
+  async getApiKey(authCode) {
+    const response = await fetch(`${this.baseUrl}/api/auth/api_key?auth_code=${encodeURIComponent(authCode)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const result = await response.json();
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+
+    return result.data;
+  }
+
+  /**
    * 获取渠道列表
    */
   async getChannels(authCode, machineCode) {
@@ -600,6 +778,11 @@ async function example() {
     // 验证授权码
     const userInfo = await authClient.validateAuthCode(authCode, machineCode);
     console.log('验证成功:', userInfo);
+
+    // 获取API密钥
+    const apiKeyInfo = await authClient.getApiKey(authCode);
+    console.log('API密钥信息:', apiKeyInfo);
+    console.log('API Key:', apiKeyInfo.api_key);
 
     // 获取渠道列表
     const channelsInfo = await authClient.getChannels(authCode, machineCode);
@@ -706,6 +889,18 @@ class AuthCodeClient:
 
         return channels_data['data']
 
+    def get_api_key(self, auth_code):
+        """根据授权码获取API密钥"""
+        response = requests.get(f'{self.base_url}/api/auth/api_key', params={
+            'auth_code': auth_code
+        })
+
+        result = response.json()
+        if not result['success']:
+            raise Exception(result['message'])
+
+        return result['data']
+
     def get_machine_code(self):
         """获取机器码"""
         # 获取系统信息
@@ -737,6 +932,11 @@ def main():
         # 验证授权码
         user_info = client.validate_auth_code(auth_code, machine_code)
         print(f"验证成功: {user_info}")
+
+        # 获取API密钥
+        api_key_info = client.get_api_key(auth_code)
+        print(f"API密钥信息: {api_key_info}")
+        print(f"API Key: {api_key_info['api_key']}")
 
         # 获取渠道列表
         channels_info = client.get_channels(auth_code, machine_code)
@@ -1124,6 +1324,15 @@ A: 建议基于硬件特征（CPU、主板序列号等）生成，确保唯一�
 **Q: 是否支持批量验证？**
 A: 当前版本不支持批量验证，每次只能验证一个授权码。
 
+**Q: 如何获取授权码绑定的API密钥？**
+A: 使用 `GET /api/auth/api_key?auth_code=YOUR_CODE` 接口，授权码必须是激活状态且已绑定API密钥。
+
+**Q: 授权码没有绑定API密钥怎么办？**
+A: 联系管理员在后台为授权码绑定API密钥，或者使用其他已绑定API密钥的授权码。
+
+**Q: 获取的API密钥可以直接使用吗？**
+A: 是的，获取到的API密钥可以直接用于调用相关API服务，请妥善保管避免泄露。
+
 ### 技术支持
 
 如果在使用过程中遇到问题，请联系技术支持团队：
@@ -1134,4 +1343,4 @@ A: 当前版本不支持批量验证，每次只能验证一个授权码。
 
 ---
 
-*最后更新时间：2024年12月*
+*最后更新时间：2025年6月*

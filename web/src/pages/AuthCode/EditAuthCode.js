@@ -32,6 +32,7 @@ const EditAuthCode = (props) => {
     wx_auto_x_code: '',
     machine_code: '',
     group: '',
+    token_id: 0,
     status: 1
   };
 
@@ -41,6 +42,7 @@ const EditAuthCode = (props) => {
   const [formApi, setFormApi] = useState(null);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [groupOptions, setGroupOptions] = useState([]);
+  const [tokenOptions, setTokenOptions] = useState([]);
 
   const handleInputChange = (name, value) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
@@ -83,11 +85,42 @@ const EditAuthCode = (props) => {
     }
   };
 
+  const fetchTokens = async () => {
+    try {
+      console.log('Fetching tokens...');
+      let res = await API.get(`/api/auth_code/available_tokens`);
+      console.log('Token API response:', res);
+      if (res === undefined) {
+        console.log('Token API response is undefined');
+        return;
+      }
+      const { success, data } = res.data;
+      console.log('Token API data:', { success, data });
+      if (success) {
+        const tokenOpts = [
+          { label: t('不绑定API密钥'), value: 0 },
+          ...data.map((token) => ({
+            label: `${token.name} (${token.key})`,
+            value: token.id,
+          }))
+        ];
+        console.log('Token options:', tokenOpts);
+        setTokenOptions(tokenOpts);
+      } else {
+        console.log('Token API failed:', res.data);
+      }
+    } catch (error) {
+      console.error('Token API error:', error);
+      showError(error.message);
+    }
+  };
+
   useEffect(() => {
     // 只在弹窗打开时处理数据
     if (props.visible) {
-      // 加载分组数据
+      // 加载分组数据和Token数据
       fetchGroups();
+      fetchTokens();
 
       if (props.editingAuthCode.id) {
         setDataLoaded(false);
@@ -417,6 +450,41 @@ const EditAuthCode = (props) => {
               }}>
                 {t('设置分组后，可通过外部接口获取该分组下的渠道列表')}
               </div>
+            </div>
+
+            {/* API密钥绑定字段 */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{
+                marginBottom: '6px',
+                fontSize: '13px',
+                fontWeight: 500
+              }}>
+                {t('绑定API密钥')} (调试: {tokenOptions.length} 个选项)
+              </div>
+              <Select
+                placeholder={t('请选择要绑定的API密钥（可选）')}
+                value={inputs.token_id || 0}
+                onChange={(value) => setInputs(prev => ({ ...prev, token_id: value }))}
+                optionList={tokenOptions}
+                style={{ width: '100%' }}
+                showClear
+              />
+              <div style={{
+                fontSize: '11px',
+                color: '#666',
+                marginTop: '4px'
+              }}>
+                {t('绑定API密钥后，可以通过该密钥进行相关操作')}
+              </div>
+              {tokenOptions.length === 0 && (
+                <div style={{
+                  fontSize: '11px',
+                  color: '#ff4d4f',
+                  marginTop: '4px'
+                }}>
+                  调试: 没有可用的API密钥选项
+                </div>
+              )}
             </div>
 
             {props.editingAuthCode.id && (

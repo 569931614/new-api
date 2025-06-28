@@ -16,7 +16,8 @@ import {
   UserCheck,
   Crown,
   Bot,
-  Clock
+  Clock,
+  Key
 } from 'lucide-react';
 
 import { ITEMS_PER_PAGE } from '../../constants';
@@ -291,6 +292,25 @@ const AuthCodesTable = () => {
       },
     },
     {
+      title: t('绑定密钥'),
+      dataIndex: 'token_id',
+      width: 120,
+      render: (text, record, index) => {
+        if (!text || text === 0) {
+          return (
+            <Tag color='grey' size='large' shape='circle'>
+              {t('未绑定')}
+            </Tag>
+          );
+        }
+        return (
+          <Tag color='green' size='large' shape='circle' prefixIcon={<Key size={14} />}>
+            {t('已绑定')}
+          </Tag>
+        );
+      },
+    },
+    {
       title: t('创建时间'),
       dataIndex: 'created_time',
       width: 150,
@@ -370,6 +390,7 @@ const AuthCodesTable = () => {
                       record.group.split(',').filter(g => g.trim() !== '').join(', ') || t('无分组')
                       : t('无分组')
                   }</div>
+                  <div><strong>{t('绑定密钥')}:</strong> {record.token_id && record.token_id !== 0 ? t('已绑定') : t('未绑定')}</div>
                 </div>
               }
               position='top'

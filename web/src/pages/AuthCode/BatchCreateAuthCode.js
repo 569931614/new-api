@@ -33,13 +33,15 @@ const BatchCreateAuthCode = (props) => {
     is_bot: false,
     wx_auto_x_code: '',
     machine_code: '',
-    group: ''
+    group: '',
+    token_id: 0
   };
 
   const [inputs, setInputs] = useState(originInputs);
   const [loading, setLoading] = useState(false);
   const [expiredDate, setExpiredDate] = useState(null);
   const [groupOptions, setGroupOptions] = useState([]);
+  const [tokenOptions, setTokenOptions] = useState([]);
 
   const handleInputChange = (name, value) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
@@ -62,9 +64,32 @@ const BatchCreateAuthCode = (props) => {
     }
   };
 
+  const fetchTokens = async () => {
+    try {
+      let res = await API.get(`/api/auth_code/available_tokens`);
+      if (res === undefined) {
+        return;
+      }
+      const { success, data } = res.data;
+      if (success) {
+        const tokenOpts = [
+          { label: t('不绑定API密钥'), value: 0 },
+          ...data.map((token) => ({
+            label: `${token.name} (${token.key})`,
+            value: token.id,
+          }))
+        ];
+        setTokenOptions(tokenOpts);
+      }
+    } catch (error) {
+      showError(error.message);
+    }
+  };
+
   useEffect(() => {
     if (props.visible) {
       fetchGroups();
+      fetchTokens();
     }
   }, [props.visible]);
 
@@ -361,9 +386,29 @@ const BatchCreateAuthCode = (props) => {
               fontSize: '12px',
               color: '#8c8c8c',
               marginLeft: '120px',
-              marginTop: '-12px'
+              marginTop: '-12px',
+              marginBottom: '16px'
             }}>
               {t('设置分组后，可通过外部接口获取该分组下的渠道列表')}
+            </div>
+
+            <Form.Select
+              field={'token_id'}
+              label={t('绑定API密钥')}
+              placeholder={t('请选择要绑定的API密钥（可选）')}
+              value={inputs.token_id || 0}
+              onChange={(value) => handleInputChange('token_id', value)}
+              optionList={tokenOptions}
+              style={{ marginBottom: '16px' }}
+              showClear
+            />
+            <div style={{
+              fontSize: '12px',
+              color: '#8c8c8c',
+              marginLeft: '120px',
+              marginTop: '-12px'
+            }}>
+              {t('绑定API密钥后，所有生成的授权码将关联到该密钥')}
             </div>
           </div>
         </Form>

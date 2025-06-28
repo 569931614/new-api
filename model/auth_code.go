@@ -23,6 +23,7 @@ type AuthCode struct {
 	WxAutoXCode string         `json:"wx_auto_x_code" gorm:"type:varchar(255)"` // wxautox码
 	MachineCode string         `json:"machine_code" gorm:"type:varchar(255)"`   // 机器码
 	Group       string         `json:"group" gorm:"type:varchar(255);index"`    // 分组名称（支持多个分组，用逗号分隔）
+	TokenId     int            `json:"token_id" gorm:"default:0;index"`         // 绑定的API密钥ID
 	CreatedBy   int            `json:"created_by" gorm:"index"`                 // 创建者ID
 	DeletedAt   gorm.DeletedAt `gorm:"index"`
 }
@@ -342,4 +343,40 @@ func DeleteAuthCodeById(id int) error {
 	}
 	authCode := AuthCode{Id: id}
 	return authCode.Delete()
+}
+
+// 获取绑定的Token信息
+func (authCode *AuthCode) GetBoundToken() (*Token, error) {
+	if authCode.TokenId == 0 {
+		return nil, nil // 没有绑定Token
+	}
+
+	var token Token
+	err := DB.First(&token, "id = ? AND status = 1", authCode.TokenId).Error
+	if err != nil {
+		return nil, err
+	}
+	return &token, nil
+}
+
+// 获取可用的Token列表（用于前端选择）
+func GetAvailableTokensForAuthCode(userId int) ([]*Token, error) {
+	var tokens []*Token
+	err := DB.Where("user_id = ? AND status = 1", userId).
+		Select("id, name, key, status, expired_time").
+		Order("created_time DESC").
+		Find(&tokens).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 清理敏感信息，只保留前8位和后4位
+	for _, token := range tokens {
+		if len(token.Key) > 12 {
+			token.Key = token.Key[:8] + "****" + token.Key[len(token.Key)-4:]
+		}
+	}
+
+	return tokens, nil
 }

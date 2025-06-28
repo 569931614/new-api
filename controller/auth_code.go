@@ -81,6 +81,26 @@ func SearchAuthCodes(c *gin.Context) {
 	})
 }
 
+// 获取可用的Token列表（用于授权码绑定）
+func GetAvailableTokens(c *gin.Context) {
+	userId := c.GetInt("id")
+
+	tokens, err := model.GetAvailableTokensForAuthCode(userId)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    tokens,
+	})
+}
+
 func GetAuthCode(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
@@ -210,6 +230,7 @@ func UpdateAuthCode(c *gin.Context) {
 		originAuthCode.IsBot = authCode.IsBot
 		originAuthCode.WxAutoXCode = authCode.WxAutoXCode
 		originAuthCode.Group = authCode.Group
+		originAuthCode.TokenId = authCode.TokenId
 		// 只有在未激活状态或管理员操作时才允许修改机器码
 		if originAuthCode.Status != 5 || authCode.MachineCode == "" {
 			originAuthCode.MachineCode = authCode.MachineCode
@@ -268,6 +289,7 @@ func BatchCreateAuthCodes(c *gin.Context) {
 		WxAutoXCode string `json:"wx_auto_x_code"`
 		MachineCode string `json:"machine_code"`
 		Group       string `json:"group"`
+		TokenId     int    `json:"token_id"`
 	}
 
 	err := json.NewDecoder(c.Request.Body).Decode(&req)
@@ -317,6 +339,7 @@ func BatchCreateAuthCodes(c *gin.Context) {
 			WxAutoXCode: req.WxAutoXCode,
 			MachineCode: req.MachineCode,
 			Group:       req.Group,
+			TokenId:     req.TokenId,
 			CreatedBy:   createdBy,
 			Status:      1,
 		}
@@ -591,6 +614,97 @@ func GetChannelsByAuthCode(c *gin.Context) {
 			"auth_groups": authGroups,
 			"channels":    channelList,
 			"total":       len(channelList),
+		},
+	})
+}
+
+// 外部接口：根据授权码获取绑定的API密钥
+func GetApiKeyByAuthCode(c *gin.Context) {
+	// 从URL参数获取授权码
+	authCodeParam := c.Query("auth_code")
+	if authCodeParam == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "授权码参数不能为空",
+		})
+		return
+	}
+
+	// 获取授权码
+	authCode, err := model.GetAuthCodeByCodeForExternal(authCodeParam)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "授权码不存在",
+		})
+		return
+	}
+
+	// 检查授权码是否有效
+	if !authCode.IsValid() {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "授权码无效或已过期",
+		})
+		return
+	}
+
+	// 检查授权码状态（必须是激活状态才能获取API密钥）
+	if authCode.Status != 5 { // 5表示激活状态
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "授权码未激活",
+		})
+		return
+	}
+
+	// 检查是否绑定了API密钥
+	if authCode.TokenId == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "授权码未绑定API密钥",
+		})
+		return
+	}
+
+	// 获取绑定的Token信息
+	token, err := authCode.GetBoundToken()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "获取API密钥失败: " + err.Error(),
+		})
+		return
+	}
+
+	if token == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "绑定的API密钥不存在或已被禁用",
+		})
+		return
+	}
+
+	// 返回API密钥信息（不暴露敏感信息）
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "获取API密钥成功",
+		"data": gin.H{
+			"token_id":        token.Id,
+			"token_name":      token.Name,
+			"api_key":         token.Key,
+			"status":          token.Status,
+			"expired_time":    token.ExpiredTime,
+			"remain_quota":    token.RemainQuota,
+			"unlimited_quota": token.UnlimitedQuota,
+			"group":           token.Group,
+			"auth_code_info": gin.H{
+				"code":      authCode.Code,
+				"name":      authCode.Name,
+				"user_type": authCode.UserType,
+				"is_bot":    authCode.IsBot,
+				"group":     authCode.Group,
+			},
 		},
 	})
 }

@@ -36,6 +36,7 @@ func SetApiRouter(router *gin.Engine) {
 		apiRouter.POST("/auth/bind", controller.BindMachineCode)
 		apiRouter.POST("/auth/validate", controller.ValidateAuthCode)
 		apiRouter.GET("/auth/channels", controller.GetChannelsByAuthCode)
+		apiRouter.GET("/auth/api_key", controller.GetApiKeyByAuthCode)
 		apiRouter.GET("/oauth/wechat", middleware.CriticalRateLimit(), controller.WeChatAuth)
 		apiRouter.GET("/oauth/wechat/bind", middleware.CriticalRateLimit(), controller.WeChatBind)
 		apiRouter.GET("/oauth/email/bind", middleware.CriticalRateLimit(), controller.EmailBind)
@@ -138,6 +139,7 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			authCodeRoute.GET("/", controller.GetAllAuthCodes)
 			authCodeRoute.GET("/search", controller.SearchAuthCodes)
+			authCodeRoute.GET("/available_tokens", controller.GetAvailableTokens)
 			authCodeRoute.GET("/:id", controller.GetAuthCode)
 			authCodeRoute.POST("/", controller.AddAuthCode)
 			authCodeRoute.POST("/batch", controller.BatchCreateAuthCodes)
