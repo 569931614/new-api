@@ -127,6 +127,11 @@ export const CHANNEL_OPTIONS = [
   },
   {
     value: 50,
+    color: 'green',
+    label: '可灵',
+  },
+  {
+    value: 51,
     color: 'purple',
     label: 'Coze JWT',
   },
