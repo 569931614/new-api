@@ -6,7 +6,7 @@ upload
 build
 *.db-journal
 logs
-web/dist
+# web/dist  # 注释掉，允许提交构建好的前端文件
 .env
 one-api
 .DS_Store
