@@ -63,7 +63,8 @@ version: '3.4'
 
 services:
   new-api:
-    image: calciumion/new-api:latest
+    build: .
+    image: new-api:custom
     container_name: new-api
     restart: always
     ports:
@@ -95,7 +96,8 @@ version: '3.4'
 
 services:
   new-api:
-    image: calciumion/new-api:latest
+    build: .
+    image: new-api:custom
     container_name: new-api
     restart: always
     command: --log-dir /app/logs
@@ -155,6 +157,7 @@ version: '3.4'
 services:
   new-api:
     build: .
+    image: new-api:custom
     container_name: new-api
     restart: always
     ports:
