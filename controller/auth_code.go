@@ -85,33 +85,14 @@ func SearchAuthCodes(c *gin.Context) {
 func GetAvailableTokens(c *gin.Context) {
 	userId := c.GetInt("id")
 
-	// 添加调试日志
-	common.SysLog(fmt.Sprintf("GetAvailableTokens: userId=%d", userId))
-
-	// 检查用户认证状态
-	if userId == 0 {
-		common.SysLog("GetAvailableTokens: userId is 0, user not authenticated")
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"success": false,
-			"message": "用户未认证",
-		})
-		return
-	}
-
-	// 只获取当前用户的Token（简化逻辑）
 	tokens, err := model.GetAvailableTokensForAuthCode(userId)
-	common.SysLog(fmt.Sprintf("Getting tokens for user: %d", userId))
-
 	if err != nil {
-		common.SysLog(fmt.Sprintf("GetAvailableTokens error: %v", err))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
-
-	common.SysLog(fmt.Sprintf("GetAvailableTokens: found %d tokens for user %d", len(tokens), userId))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

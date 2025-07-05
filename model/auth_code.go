@@ -478,7 +478,7 @@ func (authCode *AuthCode) GetBoundToken() (*Token, error) {
 func GetAvailableTokensForAuthCode(userId int) ([]*Token, error) {
 	var tokens []*Token
 	err := DB.Where("user_id = ? AND status = 1", userId).
-		Select("id, name, key, status, expired_time, user_id").
+		Select("id, name, `key`, status, expired_time, user_id").
 		Order("created_time DESC").
 		Find(&tokens).Error
 
@@ -490,35 +490,6 @@ func GetAvailableTokensForAuthCode(userId int) ([]*Token, error) {
 	for _, token := range tokens {
 		if len(token.Key) > 12 {
 			token.Key = token.Key[:8] + "****" + token.Key[len(token.Key)-4:]
-		}
-	}
-
-	return tokens, nil
-}
-
-// 获取所有可用的Token列表（管理员用）
-func GetAllAvailableTokensForAuthCode() ([]*Token, error) {
-	var tokens []*Token
-	err := DB.Where("status = 1").
-		Select("id, name, key, status, expired_time, user_id").
-		Order("created_time DESC").
-		Find(&tokens).Error
-
-	if err != nil {
-		return nil, err
-	}
-
-	// 清理敏感信息，只保留前8位和后4位
-	for _, token := range tokens {
-		if len(token.Key) > 12 {
-			token.Key = token.Key[:8] + "****" + token.Key[len(token.Key)-4:]
-		}
-		// 为管理员显示，添加用户信息到名称中
-		if token.UserId > 0 {
-			var user User
-			if err := DB.Select("username").First(&user, "id = ?", token.UserId).Error; err == nil {
-				token.Name = fmt.Sprintf("%s (用户: %s)", token.Name, user.Username)
-			}
 		}
 	}
 
