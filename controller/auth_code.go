@@ -83,18 +83,27 @@ func SearchAuthCodes(c *gin.Context) {
 
 // 获取可用的Token列表（用于授权码绑定）
 func GetAvailableTokens(c *gin.Context) {
-	// 管理员可以看到所有Token，传入0表示获取所有用户的Token
-	// 如果指定了user_id参数，则获取指定用户的Token
-	targetUserId := 0 // 默认获取所有用户的Token（管理员模式）
+	userId := c.GetInt("id")
 
-	if userIdParam := c.Query("user_id"); userIdParam != "" {
-		if parsedUserId, err := strconv.Atoi(userIdParam); err == nil {
-			targetUserId = parsedUserId
-		}
+	// 添加调试日志
+	common.SysLog(fmt.Sprintf("GetAvailableTokens: userId=%d", userId))
+
+	// 检查用户认证状态
+	if userId == 0 {
+		common.SysLog("GetAvailableTokens: userId is 0, user not authenticated")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"success": false,
+			"message": "用户未认证",
+		})
+		return
 	}
 
-	tokens, err := model.GetAvailableTokensForAuthCode(targetUserId)
+	// 只获取当前用户的Token（简化逻辑）
+	tokens, err := model.GetAvailableTokensForAuthCode(userId)
+	common.SysLog(fmt.Sprintf("Getting tokens for user: %d", userId))
+
 	if err != nil {
+		common.SysLog(fmt.Sprintf("GetAvailableTokens error: %v", err))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -102,9 +111,11 @@ func GetAvailableTokens(c *gin.Context) {
 		return
 	}
 
+	common.SysLog(fmt.Sprintf("GetAvailableTokens: found %d tokens for user %d", len(tokens), userId))
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": fmt.Sprintf("获取到 %d 个可用Token", len(tokens)),
+		"message": "",
 		"data":    tokens,
 	})
 }

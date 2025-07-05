@@ -477,21 +477,10 @@ func (authCode *AuthCode) GetBoundToken() (*Token, error) {
 // 获取可用的Token列表（用于前端选择）
 func GetAvailableTokensForAuthCode(userId int) ([]*Token, error) {
 	var tokens []*Token
-	var err error
-
-	if userId == 0 {
-		// 如果userId为0，获取所有用户的Token（管理员模式）
-		err = DB.Where("status = 1").
-			Select("id, name, key, status, expired_time, user_id").
-			Order("created_time DESC").
-			Find(&tokens).Error
-	} else {
-		// 获取指定用户的Token
-		err = DB.Where("user_id = ? AND status = 1", userId).
-			Select("id, name, key, status, expired_time, user_id").
-			Order("created_time DESC").
-			Find(&tokens).Error
-	}
+	err := DB.Where("user_id = ? AND status = 1", userId).
+		Select("id, name, key, status, expired_time, user_id").
+		Order("created_time DESC").
+		Find(&tokens).Error
 
 	if err != nil {
 		return nil, err
@@ -502,13 +491,33 @@ func GetAvailableTokensForAuthCode(userId int) ([]*Token, error) {
 		if len(token.Key) > 12 {
 			token.Key = token.Key[:8] + "****" + token.Key[len(token.Key)-4:]
 		}
+	}
 
-		// 如果是管理员模式，添加用户信息到名称中
-		if userId == 0 {
-			// 获取用户名
+	return tokens, nil
+}
+
+// 获取所有可用的Token列表（管理员用）
+func GetAllAvailableTokensForAuthCode() ([]*Token, error) {
+	var tokens []*Token
+	err := DB.Where("status = 1").
+		Select("id, name, key, status, expired_time, user_id").
+		Order("created_time DESC").
+		Find(&tokens).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// 清理敏感信息，只保留前8位和后4位
+	for _, token := range tokens {
+		if len(token.Key) > 12 {
+			token.Key = token.Key[:8] + "****" + token.Key[len(token.Key)-4:]
+		}
+		// 为管理员显示，添加用户信息到名称中
+		if token.UserId > 0 {
 			var user User
-			if err := DB.Select("username").First(&user, token.UserId).Error; err == nil {
-				token.Name = fmt.Sprintf("[%s] %s", user.Username, token.Name)
+			if err := DB.Select("username").First(&user, "id = ?", token.UserId).Error; err == nil {
+				token.Name = fmt.Sprintf("%s (用户: %s)", token.Name, user.Username)
 			}
 		}
 	}
