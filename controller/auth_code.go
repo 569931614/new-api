@@ -83,9 +83,17 @@ func SearchAuthCodes(c *gin.Context) {
 
 // 获取可用的Token列表（用于授权码绑定）
 func GetAvailableTokens(c *gin.Context) {
-	userId := c.GetInt("id")
+	// 管理员可以看到所有Token，传入0表示获取所有用户的Token
+	// 如果指定了user_id参数，则获取指定用户的Token
+	targetUserId := 0 // 默认获取所有用户的Token（管理员模式）
 
-	tokens, err := model.GetAvailableTokensForAuthCode(userId)
+	if userIdParam := c.Query("user_id"); userIdParam != "" {
+		if parsedUserId, err := strconv.Atoi(userIdParam); err == nil {
+			targetUserId = parsedUserId
+		}
+	}
+
+	tokens, err := model.GetAvailableTokensForAuthCode(targetUserId)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -96,7 +104,7 @@ func GetAvailableTokens(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
-		"message": "",
+		"message": fmt.Sprintf("获取到 %d 个可用Token", len(tokens)),
 		"data":    tokens,
 	})
 }
