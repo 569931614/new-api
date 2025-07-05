@@ -11,6 +11,10 @@ ADD go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+
+# 更新go.mod依赖
+RUN go mod tidy
+
 RUN go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)'" -o one-api
 
 FROM alpine
