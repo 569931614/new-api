@@ -2,6 +2,8 @@ package model
 
 import (
 	"errors"
+	"fmt"
+	"one-api/common"
 	"strings"
 	"time"
 
@@ -281,60 +283,173 @@ func GetChannelsByAuthCodeSimple(authCode string) ([]*Channel, error) {
 	// 首先验证授权码
 	auth, err := GetAuthCodeByCodeForExternal(authCode)
 	if err != nil {
+		common.SysLog(fmt.Sprintf("授权码查询失败: %s, 错误: %v", authCode, err))
 		return nil, errors.New("授权码不存在")
 	}
 
+	common.SysLog(fmt.Sprintf("授权码信息: code=%s, status=%d, group='%s'", auth.Code, auth.Status, auth.Group))
+
 	// 验证授权码状态（必须是激活状态）
 	if auth.Status != 5 {
+		common.SysLog(fmt.Sprintf("授权码状态不是激活状态: %d", auth.Status))
 		return nil, errors.New("授权码未激活")
 	}
 
-	// 如果没有设置分组，返回空列表
+	// 如果没有设置分组，返回所有启用的渠道（修改逻辑）
 	if auth.Group == "" {
-		return []*Channel{}, nil
+		common.SysLog("授权码没有设置分组，返回所有启用的渠道")
+		var channels []*Channel
+		err = DB.Where("status = ?", 1).Find(&channels).Error
+		if err != nil {
+			common.SysLog(fmt.Sprintf("查询所有启用渠道失败: %v", err))
+			return nil, errors.New("获取渠道列表失败")
+		}
+		common.SysLog(fmt.Sprintf("返回所有启用渠道，共 %d 个", len(channels)))
+		return channels, nil
 	}
 
 	// 解析多个分组（用逗号分隔）
 	groups := strings.Split(strings.Trim(auth.Group, ","), ",")
-	if len(groups) == 0 {
+	common.SysLog(fmt.Sprintf("原始分组: '%s', 解析后: %v", auth.Group, groups))
+
+	var cleanGroups []string
+	for _, group := range groups {
+		group = strings.TrimSpace(group)
+		if group != "" {
+			cleanGroups = append(cleanGroups, group)
+		}
+	}
+
+	if len(cleanGroups) == 0 {
+		common.SysLog("没有有效的分组")
 		return []*Channel{}, nil
 	}
 
-	// 根据分组获取渠道列表
-	var channels []*Channel
+	common.SysLog(fmt.Sprintf("有效分组: %v", cleanGroups))
 
-	// 构建查询条件，支持多个分组
-	var whereClause string
+	// 根据分组获取渠道列表 - 使用更灵活的匹配逻辑
+	var channels []*Channel
+	var whereConditions []string
 	var args []interface{}
 
-	for i, group := range groups {
-		group = strings.TrimSpace(group)
-		if group == "" {
-			continue
-		}
+	for _, group := range cleanGroups {
+		// 支持多种分组格式的匹配
+		// 1. 精确匹配: group = 'groupname'
+		// 2. 开头匹配: group LIKE 'groupname,%'
+		// 3. 中间匹配: group LIKE '%,groupname,%'
+		// 4. 结尾匹配: group LIKE '%,groupname'
+		condition := "(`group` = ? OR `group` LIKE ? OR `group` LIKE ? OR `group` LIKE ?)"
+		whereConditions = append(whereConditions, condition)
 
-		if i > 0 {
-			whereClause += " OR "
-		}
-
-		// 使用LIKE查询支持渠道的多分组匹配
-		whereClause += "(',' || `group` || ',') LIKE ?"
-		args = append(args, "%,"+group+",%")
+		args = append(args, group)           // 精确匹配
+		args = append(args, group+",%")      // 开头匹配
+		args = append(args, "%,"+group+",%") // 中间匹配
+		args = append(args, "%,"+group)      // 结尾匹配
 	}
 
-	if whereClause == "" {
-		return []*Channel{}, nil
-	}
-
-	whereClause = "(" + whereClause + ") AND status = ?"
+	whereClause := "(" + strings.Join(whereConditions, " OR ") + ") AND status = ?"
 	args = append(args, 1)
+
+	common.SysLog(fmt.Sprintf("查询条件: %s", whereClause))
+	common.SysLog(fmt.Sprintf("查询参数: %v", args))
 
 	err = DB.Where(whereClause, args...).Find(&channels).Error
 	if err != nil {
+		common.SysLog(fmt.Sprintf("查询渠道失败: %v", err))
 		return nil, errors.New("获取渠道列表失败")
 	}
 
+	common.SysLog(fmt.Sprintf("查询到 %d 个匹配的渠道", len(channels)))
+	for _, ch := range channels {
+		common.SysLog(fmt.Sprintf("  渠道: ID=%d, 名称=%s, 分组='%s', 状态=%d", ch.Id, ch.Name, ch.Group, ch.Status))
+	}
+
 	return channels, nil
+}
+
+// 调试函数：获取授权码和渠道的详细信息
+func DebugAuthCodeChannels(authCode string) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// 1. 获取授权码信息
+	auth, err := GetAuthCodeByCodeForExternal(authCode)
+	if err != nil {
+		result["auth_code_error"] = err.Error()
+		return result
+	}
+
+	result["auth_code"] = map[string]interface{}{
+		"code":   auth.Code,
+		"status": auth.Status,
+		"group":  auth.Group,
+		"name":   auth.Name,
+	}
+
+	// 2. 获取所有启用的渠道
+	var allChannels []*Channel
+	DB.Where("status = ?", 1).Find(&allChannels)
+
+	var channelInfo []map[string]interface{}
+	for _, ch := range allChannels {
+		channelInfo = append(channelInfo, map[string]interface{}{
+			"id":     ch.Id,
+			"name":   ch.Name,
+			"group":  ch.Group,
+			"status": ch.Status,
+			"type":   ch.Type,
+		})
+	}
+	result["all_enabled_channels"] = channelInfo
+
+	// 3. 测试分组匹配
+	if auth.Group != "" {
+		groups := strings.Split(strings.Trim(auth.Group, ","), ",")
+		var cleanGroups []string
+		for _, group := range groups {
+			group = strings.TrimSpace(group)
+			if group != "" {
+				cleanGroups = append(cleanGroups, group)
+			}
+		}
+
+		result["parsed_groups"] = cleanGroups
+
+		// 测试每个分组的匹配情况
+		var matchResults []map[string]interface{}
+		for _, group := range cleanGroups {
+			var matchedChannels []*Channel
+
+			// 使用新的匹配逻辑
+			condition := "(`group` = ? OR `group` LIKE ? OR `group` LIKE ? OR `group` LIKE ?) AND status = ?"
+			args := []interface{}{
+				group,               // 精确匹配
+				group + ",%",        // 开头匹配
+				"%," + group + ",%", // 中间匹配
+				"%," + group,        // 结尾匹配
+				1,                   // 状态过滤
+			}
+
+			DB.Where(condition, args...).Find(&matchedChannels)
+
+			var matched []map[string]interface{}
+			for _, ch := range matchedChannels {
+				matched = append(matched, map[string]interface{}{
+					"id":    ch.Id,
+					"name":  ch.Name,
+					"group": ch.Group,
+				})
+			}
+
+			matchResults = append(matchResults, map[string]interface{}{
+				"group":            group,
+				"matched_channels": matched,
+				"count":            len(matchedChannels),
+			})
+		}
+		result["match_results"] = matchResults
+	}
+
+	return result
 }
 
 func DeleteAuthCodeById(id int) error {

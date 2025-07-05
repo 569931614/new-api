@@ -618,6 +618,26 @@ func GetChannelsByAuthCode(c *gin.Context) {
 	})
 }
 
+// 调试接口：获取授权码和渠道的详细匹配信息
+func DebugAuthCodeChannels(c *gin.Context) {
+	authCodeParam := c.Query("auth_code")
+	if authCodeParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "授权码参数不能为空",
+		})
+		return
+	}
+
+	debugInfo := model.DebugAuthCodeChannels(authCodeParam)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "调试信息",
+		"data":    debugInfo,
+	})
+}
+
 // 外部接口：根据授权码获取绑定的API密钥
 func GetApiKeyByAuthCode(c *gin.Context) {
 	// 从URL参数获取授权码
